@@ -1,0 +1,82 @@
+<body>
+<script id='__bs_script__'>//<![CDATA[
+document.write("<script async src='http://HOST:3000/browser-sync/browser-sync-client.js?v=2.18.5'><\/script>".replace("HOST", location.hostname));
+//]]></script>
+<div id='container'></div>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.min.js'></script>
+<script src='OBJLoader.js'></script>
+
+<script id='vertexShader' type='x-shader/x-vertex'>
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = vec4( position, 1.0 );
+}
+</script>
+
+<script id='fragmentShader' type='x-shader/x-fragment'>
+    uniform vec2 u_mouse;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+    uniform sampler2D u_gradient_tex;
+    varying vec2 vUv;
+
+    void main() {
+      gl_FragColor = texture2D(u_gradient_tex,vUv);
+    }
+
+</script>
+<script>
+    var container;
+    var camera, scene, renderer;
+    var uniforms;
+    init();
+    animate();
+    function init() {
+        container = document.getElementById('container');
+        camera = new THREE.Camera();
+        camera.position.z = 1;
+        scene = new THREE.Scene();
+        uniforms = {
+            u_time: {type: "f", value: 1.0},
+            u_mouse: {type: "v2", value: new THREE.Vector2(0.5, 0.5)},
+            u_resolution: {type: "v2", value: new THREE.Vector2()},
+            u_gradient_tex: {type: "t", value: THREE.ImageUtils.loadTexture("gradient.jpg")}
+        };
+        uniforms.u_gradient_tex.value.wrapS = uniforms.u_gradient_tex.value.wrapT = THREE.RepeatWrapping;
+        var material = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent
+        });
+        var loader = new THREE.OBJLoader();
+        loader.load('suzanne.obj', function (object) {
+            object.traverse(function (child) {
+                if (child instanceof THREE.Mesh) {
+                    child.material = material;
+                }
+            });
+            scene.add(object);
+
+        });
+        renderer = new THREE.WebGLRenderer();
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+        onWindowResize();
+        window.addEventListener('resize', onWindowResize, false);
+    }
+    function onWindowResize(event) {
+        renderer.setSize(window.innerWidth - 50, window.innerHeight - 50);
+        uniforms.u_resolution.value.x = renderer.domElement.width;
+        uniforms.u_resolution.value.y = renderer.domElement.height;
+    }
+    function animate() {
+        requestAnimationFrame(animate);
+        render();
+    }
+    function render() {
+        uniforms.u_time.value += 0.02;
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
