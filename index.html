@@ -3,14 +3,31 @@
 document.write("<script async src='http://HOST:3000/browser-sync/browser-sync-client.js?v=2.18.5'><\/script>".replace("HOST", location.hostname));
 //]]></script>
 <div id='container'></div>
-<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.min.js'></script>
+<script src="http://threejs.org/build/three.min.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+<style media="screen">
+  body {
+    overflow: hidden;
+  }
+</style>
 <script src='OBJLoader.js'></script>
 
 <script id='vertexShader' type='x-shader/x-vertex'>
 varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewDir;
+varying vec3 vPos;
+varying vec4 vWPos;
+varying vec3 projTextCoord;
 void main() {
     vUv = uv;
-    gl_Position = vec4( position, 1.0 );
+
+
+    vec3 newPosition = position + normal;
+    vWPos = modelMatrix * vec4( newPosition, 1.0 );
+    vViewDir = cameraPosition - vWPos.xyz;
+    projTextCoord = vViewDir;
+    gl_Position = projectionMatrix * viewMatrix * vWPos;
 }
 </script>
 
@@ -20,62 +37,135 @@ void main() {
     uniform float u_time;
     uniform sampler2D u_gradient_tex;
     varying vec2 vUv;
+    varying vec3 projTextCoord;
 
     void main() {
-      gl_FragColor = texture2D(u_gradient_tex,vUv);
+
+      gl_FragColor = texture2D(u_gradient_tex,projTextCoord.xy);
     }
 
 </script>
 <script>
     var container;
     var camera, scene, renderer;
+    var mesh;
     var uniforms;
+    var controls;
     init();
     animate();
-    function init() {
-        container = document.getElementById('container');
-        camera = new THREE.Camera();
-        camera.position.z = 1;
-        scene = new THREE.Scene();
-        uniforms = {
-            u_time: {type: "f", value: 1.0},
-            u_mouse: {type: "v2", value: new THREE.Vector2(0.5, 0.5)},
-            u_resolution: {type: "v2", value: new THREE.Vector2()},
-            u_gradient_tex: {type: "t", value: THREE.ImageUtils.loadTexture("gradient.jpg")}
-        };
-        uniforms.u_gradient_tex.value.wrapS = uniforms.u_gradient_tex.value.wrapT = THREE.RepeatWrapping;
-        var material = new THREE.ShaderMaterial({
-            uniforms: uniforms,
-            vertexShader: document.getElementById('vertexShader').textContent,
-            fragmentShader: document.getElementById('fragmentShader').textContent
-        });
-        var loader = new THREE.OBJLoader();
-        loader.load('suzanne.obj', function (object) {
-            object.traverse(function (child) {
-                if (child instanceof THREE.Mesh) {
-                    child.material = material;
-                }
-            });
-            scene.add(object);
+    // function init() {
+    //     container = document.getElementById('container');
+    //
+    //     camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1000000 );
+    //      camera.position.z = 500;
+    //      scene = new THREE.Scene();
+    //      scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 );
+    //     uniforms = {
+    //         u_time: {type: "f", value: 1.0},
+    //         u_mouse: {type: "v2", value: new THREE.Vector2(0.5, 0.5)},
+    //         u_resolution: {type: "v2", value: new THREE.Vector2()},
+    //         u_gradient_tex: {type: "t", value: THREE.ImageUtils.loadTexture("gradient.jpg")}
+    //     };
+    //     uniforms.u_resolution.value.x = window.innerWidth;
+    //     uniforms.u_resolution.value.y =  window.innerHeight;
+    //     uniforms.u_gradient_tex.value.wrapS = uniforms.u_gradient_tex.value.wrapT = THREE.RepeatWrapping;
+    //     var material = new THREE.ShaderMaterial({
+    //         uniforms: uniforms,
+    //         vertexShader: document.getElementById('vertexShader').textContent,
+    //         fragmentShader: document.getElementById('fragmentShader').textContent
+    //     });
+    //     var loader = new THREE.OBJLoader();
+    //     loader.load('suzanne.obj', function (object) {
+    //         object.traverse(function (child) {
+    //             if (child instanceof THREE.Mesh) {
+    //                 child.material = material;
+    //                 mesh = child;
+    //             }
+    //         });
+    //         scene.add(object);
+    //
+    //     });
+    //     renderer = new THREE.WebGLRenderer( { antialias: false } );
+    //     renderer.setSize( window.innerWidth, window.innerHeight );
+    //
+    //     container = document.getElementById( 'container' );
+    //     container.appendChild( renderer.domElement );
+    //     window.addEventListener( 'resize', onWindowResize, false );
+    //     controls = new THREE.OrbitControls( camera );
+    //     controls.addEventListener( 'change', render );
+    // }
 
-        });
-        renderer = new THREE.WebGLRenderer();
-        renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
-        onWindowResize();
-        window.addEventListener('resize', onWindowResize, false);
-    }
-    function onWindowResize(event) {
-        renderer.setSize(window.innerWidth - 50, window.innerHeight - 50);
-        uniforms.u_resolution.value.x = renderer.domElement.width;
-        uniforms.u_resolution.value.y = renderer.domElement.height;
+    function init() {
+
+  camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1000 );
+  camera.position.z = 5;
+
+  controls = new THREE.OrbitControls( camera );
+  controls.addEventListener( 'change', render );
+
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 );
+
+  // world
+
+      uniforms = {
+          u_time: {type: "f", value: 1.0},
+          u_mouse: {type: "v2", value: new THREE.Vector2(0.5, 0.5)},
+          u_resolution: {type: "v2", value: new THREE.Vector2()},
+          u_gradient_tex: {type: "t", value: THREE.ImageUtils.loadTexture("gradient.jpg")}
+      };
+      uniforms.u_resolution.value.x = window.innerWidth;
+      uniforms.u_resolution.value.y =  window.innerHeight;
+      uniforms.u_gradient_tex.value.wrapS = uniforms.u_gradient_tex.value.wrapT = THREE.RepeatWrapping;
+      var material = new THREE.ShaderMaterial({
+          uniforms: uniforms,
+          vertexShader: document.getElementById('vertexShader').textContent,
+          fragmentShader: document.getElementById('fragmentShader').textContent
+      });
+      //var material = new THREE.MeshLambertMaterial( { color:0xff0000, shading: THREE.FlatShading } );
+      var loader = new THREE.OBJLoader();
+      loader.load('suzanne.obj', function (object) {
+          object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                  child.material = material;
+                  mesh = child;
+              }
+          });
+          scene.add(object);
+
+      });
+
+
+// renderer
+
+  renderer = new THREE.WebGLRenderer( { antialias: false } );
+  renderer.setClearColor( scene.fog.color, 1 );
+  renderer.setSize( window.innerWidth, window.innerHeight );
+
+  container = document.getElementById( 'container' );
+  container.appendChild( renderer.domElement );
+
+  window.addEventListener( 'resize', onWindowResize, false );
+
+}
+    function onWindowResize() {
+
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize( window.innerWidth, window.innerHeight );
+
+      render();
+
     }
     function animate() {
         requestAnimationFrame(animate);
-        render();
+         controls.update();
+         render();
     }
     function render() {
-        uniforms.u_time.value += 0.02;
+    //  console.log('render');
+        //uniforms.u_time.value += 0.02;
         renderer.render(scene, camera);
     }
 </script>
