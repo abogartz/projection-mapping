@@ -3,11 +3,20 @@
     document.write("<script async src='http://HOST:3000/browser-sync/browser-sync-client.js?v=2.18.5'><\/script>".replace("HOST", location.hostname));
 //]]></script>
 <div id='container'></div>
+<div class="dot"></div>
 <script src="http://threejs.org/build/three.min.js"></script>
-<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+<script src="controls.js"></script>
 <style media="screen">
   body {
     overflow: hidden;
+  }
+  .dot {
+      background: white;
+      width: 30px;
+      height: 30px;
+      position: absolute;
+      top: 1px;
+      left: 1px;
   }
 </style>
 <script src='OBJLoader.js'></script>
@@ -32,6 +41,8 @@ void main() {
     #define PI 3.1415926535897932384626433832795
     const bool show_backface = true;
     uniform vec2 u_resolution;
+    uniform float u_rotation;
+    uniform vec2 u_offset;
     uniform vec3 u_ambient_light;
     uniform sampler2D u_gradient_tex;
     uniform vec3 u_projection_pos;
@@ -127,12 +138,12 @@ void main() {
         // color any point outside of 0-1 "black"
         // if you want repeating take this out
         vec2 uvs = vec2(projectedU, projectedV);
-        vec2 coordinates = rotateUVS(u_time, translateUvs(uvs, vec2(0.5, 0.5)));
+        vec2 coordinates = rotateUVS(u_rotation, translateUvs(uvs, u_offset));
         vec4 finalColor;
         if ((coordinates.x) > 1.0)  {
-            finalColor = red;
+            finalColor = black;
         } else if ((coordinates.x) < 0.0001)  {
-            finalColor = red;
+            finalColor = black;
         } else if ((coordinates.y) > 1.0) {
             finalColor = texture2D(u_gradient_tex, coordinates);
         } else if ((coordinates.y) < 0.0001)  {
@@ -166,8 +177,10 @@ void main() {
             u_resolution: {type: "v2", value: new THREE.Vector2()},
             u_time: {type: "f", value: 1.0},
             u_gradient_tex: { type: "t", value: THREE.ImageUtils.loadTexture("gradient.jpg") },
-            u_projection_pos: { type: "v3", value: new THREE.Vector3(0, 0, 20) },
-            u_ambient_light: { type: "v3", value: new THREE.Vector3(0.3, 0.2, 0.2) },
+            u_projection_pos: { type: "v3", value: new THREE.Vector3(0, 0, 30) },
+            u_rotation: { type: "f", value: 180.0 },
+            u_offset: { type: "v2", value: new THREE.Vector2(0.5, 0.5) },
+            u_ambient_light: { type: "v3", value: new THREE.Vector3(0.5, 0.5, 0.5) },
             u_lighting_pos: { type: "v3", value: new THREE.Vector3(3, 13.0, 10) }
         };
         uniforms.u_gradient_tex.value.wrapS = uniforms.u_gradient_tex.value.wrapT = THREE.RepeatWrapping;

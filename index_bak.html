@@ -1,0 +1,114 @@
+<body>
+<script id='__bs_script__'>//<![CDATA[
+document.write("<script async src='http://HOST:3000/browser-sync/browser-sync-client.js?v=2.18.5'><\/script>".replace("HOST", location.hostname));
+//]]></script>
+<div id='container'></div>
+<script src="http://threejs.org/build/three.min.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+<style media="screen">
+  body {
+    overflow: hidden;
+  }
+</style>
+<script src='OBJLoader.js'></script>
+
+<script id='vertexShader' type='x-shader/x-vertex'>
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewDir;
+varying vec3 vPos;
+varying vec4 vWPos;
+varying vec3 projTextCoord;
+uniform vec3 u_gradient_pos;
+void main() {
+    vUv = uv;
+    vec3 newPosition = position + normal;
+    vWPos = modelMatrix * vec4( newPosition, 1.0 );
+    vViewDir = cameraPosition - vWPos.xyz;
+    projTextCoord = 1.0 - (u_gradient_pos - vWPos.xyz) * vec3(0.3);
+    gl_Position = projectionMatrix * viewMatrix * vWPos;
+}
+</script>
+
+<script id='fragmentShader' type='x-shader/x-fragment'>
+    uniform vec2 u_mouse;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+    uniform sampler2D u_gradient_tex;
+    varying vec2 vUv;
+    varying vec3 projTextCoord;
+
+    void main() {
+      gl_FragColor = texture2D(u_gradient_tex, projTextCoord.xy);
+    }
+
+</script>
+<script>
+    var container;
+    var camera, scene, renderer;
+    var mesh;
+    var uniforms;
+    var controls;
+    init();
+    animate();
+    function init() {
+
+      camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+      camera.position.z = 5;
+      controls = new THREE.OrbitControls( camera );
+      controls.addEventListener( 'change', render );
+      scene = new THREE.Scene();
+      uniforms = {
+          u_gradient_pos: {type: "v3", value: new THREE.Vector3(1, 0, 0)},
+          u_time: {type: "f", value: 1.0},
+          u_mouse: {type: "v2", value: new THREE.Vector2(0.5, 0.5)},
+          u_resolution: {type: "v2", value: new THREE.Vector2()},
+          u_gradient_tex: {type: "t", value: THREE.ImageUtils.loadTexture("gradient.jpg")}
+      };
+      uniforms.u_resolution.value.x = window.innerWidth;
+      uniforms.u_resolution.value.y =  window.innerHeight;
+      uniforms.u_gradient_tex.value.wrapS = uniforms.u_gradient_tex.value.wrapT = THREE.RepeatWrapping;
+      var material = new THREE.ShaderMaterial({
+          uniforms: uniforms,
+          vertexShader: document.getElementById('vertexShader').textContent,
+          fragmentShader: document.getElementById('fragmentShader').textContent
+      });
+      var loader = new THREE.OBJLoader();
+      loader.load('suzanne.obj', function (object) {
+          object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                  child.material = material;
+                  mesh = child;
+              }
+          });
+          scene.add(object);
+        });
+      // renderer
+      renderer = new THREE.WebGLRenderer( { antialias: false } );
+      renderer.setSize( window.innerWidth, window.innerHeight );
+
+      container = document.getElementById( 'container' );
+      container.appendChild( renderer.domElement );
+
+      window.addEventListener( 'resize', onWindowResize, false );
+
+}
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize( window.innerWidth, window.innerHeight );
+      render();
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+         controls.update();
+         render();
+    }
+
+    function render() {
+        uniforms.u_time.value += 0.02;
+        renderer.render(scene, camera);
+    }
+</script>
+</body>

@@ -1,0 +1,28 @@
+{
+  "name": "glsl",
+  "version": "1.0.0",
+  "description": "Test project for projection mapping using GLSL",
+  "main": "OBJLoader.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abogartz/projection-mapping.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/abogartz/projection-mapping/issues"
+  },
+  "homepage": "https://github.com/abogartz/projection-mapping#readme",
+  "devDependencies": {
+    "@angular/compiler": "2.4.1",
+    "@angular/core": "2.4.1",
+    "codelyzer": "2.0.0-beta.3",
+    "tslint": "4.0.2",
+    "typescript": "2.1.4",
+     "rxjs": "5.0.0-beta.12",
+    "zone.js": "0.6.21"
+  }
+}
